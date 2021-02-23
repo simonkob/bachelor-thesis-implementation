@@ -1,4 +1,4 @@
-from OTXv2 import OTXv2, IndicatorTypes
+from OTXv2 import OTXv2
 from app import App
 
 otx = OTXv2("65c4b1a25b5896043ef4dfd0b38ea42a5910abac8f4fd19e79f83fda68965eeb")
