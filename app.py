@@ -12,14 +12,14 @@ class App:
     def create_pulse(self, pulse):
         with self.driver.session() as session:
             session.write_transaction(self._create_pulse, pulse)
-            print(f"Created pulse with name: {pulse.get('name')}")
+            print(f"Created or modified pulse with name: {pulse.get('name')}")
 
     @staticmethod
     def _create_pulse(tx, pulse):
         query = (''.join((
             "MERGE (u:User { name: $author_name }) "
             "MERGE (p:Pulse { id: $pulse_id}) "
-            "ON CREATE SET p.name = $pulse_name, p.description = $pulse_description, p.revision = $revision, "
+            "SET p.name = $pulse_name, p.description = $pulse_description, p.revision = $revision, "
             "p.public = $public, p.references = $references "
             "MERGE (u)-[:CREATED {created: $created, modified: $modified}]->(p) ",
             "MERGE (tlp:Tlp { type: $type}) "
