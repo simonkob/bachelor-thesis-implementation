@@ -30,7 +30,7 @@ class App:
             App._create_pulse_subquery("Malware_family", "IN_MALWARE_FAMILY", pulse["malware_families"]),
             App._create_pulse_subquery("Country", "TARGETS", pulse["targeted_countries"]),
             App._create_pulse_subquery("Industry", "CONCERNS", pulse["industries"]),
-            App._create_pulse_subquery("Attack", "HAS_ATTACK", pulse["attack_ids"], "id"),
+            App._create_attacks_subquery(pulse["attack_ids"]),
             "WITH p UNWIND $indicators as iItem "
             "CALL apoc.merge.node(['Indicator'], {id: iItem['id']}, {indicator: iItem['indicator'], "
             "content: iItem['content'], title: iItem['title'], description: iItem['description'], "
@@ -63,3 +63,21 @@ class App:
             return f"FOREACH (item in {arr} | " \
                    f"MERGE (t:{node_type} {{{attribute_name}: item}}) " \
                    f"MERGE (p)-[:{relationship_name}]->(t)) "
+
+    @staticmethod
+    def _create_attacks_subquery(attacks):
+        if not attacks:
+            return ""
+        else:
+            return f"WITH p " \
+                   f"UNWIND {attacks} as item " \
+                   f"MERGE (t:Attack {{id: item}}) " \
+                   f"MERGE (p)-[:HAS_ATTACK]->(t) " \
+                   f"WITH item, t, p " \
+                   f"CALL apoc.do.when(" \
+                   f"item CONTAINS '.'," \
+                   f"'MERGE (t1:Attack {{id: split(item, \".\")[0]}}) " \
+                   f"MERGE (t1)-[:PARENT]->(t)'," \
+                   f"''," \
+                   f"{{item:item, t:t}}) " \
+                   f"YIELD value "
