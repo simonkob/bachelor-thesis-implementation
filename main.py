@@ -29,6 +29,11 @@ def save_timestamp(config_):
 
 
 def get_watched_users(options: InfoOptions = InfoOptions.following):
+    """Gets list of users that AlienVault follows/subscribes to.
+
+    :param options: Whether returned users should be following or subscribing
+    :return: list of users that AlienVault follows/subscribes to
+    """
     users = []
     try:
         api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/AlienVault/{options.name}/?limit=20")
