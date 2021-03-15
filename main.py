@@ -37,7 +37,7 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
     """
     users = []
     try:
-        api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/{user}/{options.name}/?limit=20")
+        api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/{user_}/{options.name}/?limit=20")
     except (NotFound, BadRequest, InvalidAPIKey):
         return None
     while True:
