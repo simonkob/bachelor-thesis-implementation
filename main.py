@@ -28,15 +28,16 @@ def save_timestamp(config_):
         config_.write(config_file)
 
 
-def get_watched_users(options: InfoOptions = InfoOptions.following):
-    """Gets list of users that AlienVault follows/subscribes to.
+def get_watched_users(options: InfoOptions = InfoOptions.following, user_="AlienVault"):
+    """Gets list of users that specified user follows/subscribes to. Defaults user_ to AlienVault
 
     :param options: Whether returned users should be following or subscribing
+    :param user_:  User whose following/subscribing users we want to get
     :return: list of users that AlienVault follows/subscribes to
     """
     users = []
     try:
-        api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/AlienVault/{options.name}/?limit=20")
+        api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/{user}/{options.name}/?limit=20")
     except (NotFound, BadRequest, InvalidAPIKey):
         return None
     while True:
