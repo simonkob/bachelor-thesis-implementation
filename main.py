@@ -50,6 +50,30 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
     return users
 
 
+def get_trusted_users(user_, threshold, is_follower, subscribe=None, follow=None):
+    if not follow:
+        follow = set()
+    if not subscribe:
+        subscribe = set()
+    if is_follower:
+        follow.add(user_)
+    else:
+        subscribe.add(user_)
+    if threshold >= 1:
+        subscribers = get_watched_users(InfoOptions.subscribing, user_)
+        for subscriber in subscribers:
+            if subscriber not in subscribe:
+                if not is_follower:
+                    subscribe.update(get_trusted_users(subscriber, threshold, is_follower, subscribe, follow)[1])
+                else:
+                    follow.update(get_trusted_users(subscriber, threshold, is_follower, subscribe, follow)[0])
+        followers = get_watched_users(InfoOptions.following, user_)
+        for follower in followers:
+            if follower not in follow and follower not in subscribe:
+                follow.update(get_trusted_users(follower, threshold-1, True, subscribe, follow)[0])
+    return [follow, subscribe]
+
+
 if __name__ == '__main__':
     config = configparser.ConfigParser()
     bolt_url = "bolt://localhost:7687"
