@@ -50,7 +50,7 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
     return users
 
 
-def get_trusted_users(user_, threshold, is_follower, subscribe=None, follow=None):
+def get_trusted_users(user_, threshold, is_follower=False, subscribe=None, follow=None):
     if not follow:
         follow = set()
     if not subscribe:
