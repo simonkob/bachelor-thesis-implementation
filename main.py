@@ -51,6 +51,15 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
 
 
 def get_trusted_users(user_, threshold, is_follower=False, subscribe=None, follow=None):
+    """Gets users that should be trusted to follow and subscribe based on threshold.
+
+    :param user_: Current user
+    :param threshold: Threshold
+    :param is_follower: Whether the user is followed or not
+    :param subscribe: Set of users that are safe to subscribe
+    :param follow: Set of users that are safe to follow
+    :return: Sets of users that are safe to follow and subscribe
+    """
     if follow is None:
         follow = set()
     if subscribe is None:
