@@ -52,6 +52,29 @@ def mock_repeat(*args):
         }.get(args[1], [])
 
 
+def mock_threshold(*args):
+    if args[0] == InfoOptions.following:
+        return {
+            "AlienVault": ["f1"],
+            "f1": ["f2"],
+            "f2": ["f3"],
+            "f3": ["f4"],
+            "f4": ["f5"],
+            "f5": ["f6"],
+            "f6": ["f7"]
+        }.get(args[1], [])
+    else:
+        return {
+            "AlienVault": ["s1"],
+            "s1": ["s2"],
+            "s2": ["s3"],
+            "s3": ["s4"],
+            "s4": ["s5"],
+            "s5": ["s6"],
+            "s6": ["s7"]
+        }.get(args[1], [])
+
+
 class GetTrustedUsersTestCase(unittest.TestCase):
     @mock.patch("main.get_watched_users", side_effect=mock_empty)
     def test_empty(self, mock_get):
@@ -76,6 +99,24 @@ class GetTrustedUsersTestCase(unittest.TestCase):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {'u2'})
         self.assertEqual(result[1], {'AlienVault', 'u1', 'u3', 'u4'})
+
+    @mock.patch("main.get_watched_users", side_effect=mock_threshold)
+    def test_threshold(self, mock_get):
+        result = get_trusted_users("AlienVault", 1)
+        self.assertEqual(result[0], {'f1'})
+        self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
+        result = get_trusted_users("AlienVault", 2)
+        self.assertEqual(result[0], {'f1', "f2"})
+        self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
+        result = get_trusted_users("AlienVault", 3)
+        self.assertEqual(result[0], {'f1', "f2", "f3"})
+        self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
+        result = get_trusted_users("AlienVault", 6)
+        self.assertEqual(result[0], {'f1', "f2", "f3", "f4", "f5", "f6"})
+        self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
+        result = get_trusted_users("AlienVault", 7)
+        self.assertEqual(result[0], {'f1', "f2", "f3", "f4", "f5", "f6", "f7"})
+        self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
 
 
 if __name__ == "__main__":
