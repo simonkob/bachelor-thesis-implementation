@@ -50,11 +50,12 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
     return users
 
 
-def get_trusted_users(user_, threshold, is_follower=False, subscribe=None, follow=None):
+def get_trusted_users(user_, threshold, current=1, is_follower=False, subscribe=None, follow=None):
     """Gets users that should be trusted to follow and subscribe based on threshold.
 
     :param user_: Current user
     :param threshold: Threshold
+    :param current: current level of trustability
     :param is_follower: Whether the user is followed or not
     :param subscribe: Set of users that are safe to subscribe
     :param follow: Set of users that are safe to follow
@@ -68,18 +69,18 @@ def get_trusted_users(user_, threshold, is_follower=False, subscribe=None, follo
         follow.add(user_)
     else:
         subscribe.add(user_)
-    if threshold >= 1:
+    if threshold >= current:
         subscribers = get_watched_users(InfoOptions.subscribing, user_)
         for subscriber in subscribers:
             if subscriber not in subscribe:
                 if not is_follower:
-                    subscribe.update(get_trusted_users(subscriber, threshold, is_follower, subscribe, follow)[1])
+                    subscribe.update(get_trusted_users(subscriber, threshold, current, is_follower, subscribe, follow)[1])
                 else:
-                    follow.update(get_trusted_users(subscriber, threshold, is_follower, subscribe, follow)[0])
+                    follow.update(get_trusted_users(subscriber, threshold, current, is_follower, subscribe, follow)[0])
         followers = get_watched_users(InfoOptions.following, user_)
         for follower in followers:
             if follower not in follow and follower not in subscribe:
-                follow.update(get_trusted_users(follower, threshold-1, True, subscribe, follow)[0])
+                follow.update(get_trusted_users(follower, threshold, current+1, True, subscribe, follow)[0])
     return [follow, subscribe]
 
 
