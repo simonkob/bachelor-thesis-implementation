@@ -2,6 +2,9 @@
 
 Implementation of bachelor's thesis on topic of Gathering Information from Community Threat Intelligence Platform
 
+## Before running
+
+Replace api_key with your own OTX api key. You can get it [here](https://otx.alienvault.com/api) after logging in or signing up.
 
 ## Run locally
 
