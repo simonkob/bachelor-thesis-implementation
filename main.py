@@ -2,9 +2,11 @@ from OTXv2 import OTXv2, NotFound, BadRequest, InvalidAPIKey
 from app import App
 import datetime
 import configparser
+import os
 from enum import Enum
 
 otx = OTXv2("65c4b1a25b5896043ef4dfd0b38ea42a5910abac8f4fd19e79f83fda68965eeb")
+is_in_docker = os.getenv('IS_IN_DOCKER', False)
 
 
 class InfoOptions(Enum):
@@ -86,7 +88,10 @@ def get_trusted_users(user_, threshold, current=1, is_follower=False, subscribe=
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
-    bolt_url = "bolt://localhost:7687"
+    if is_in_docker:
+        bolt_url = "bolt://neo4j_db:7687"
+    else:
+        bolt_url = "bolt://localhost:7687"
     user = "neo4j"
     password = "1234"
     app = App(bolt_url, user, password)
