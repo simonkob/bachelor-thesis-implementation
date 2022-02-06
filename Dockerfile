@@ -1,9 +1,12 @@
 FROM python:3.9.1
 
+WORKDIR /home/app
+
+ENV IS_IN_DOCKER=yes
+
 COPY main.py .
 COPY app.py .
 COPY requirements.txt .
-COPY *config.ini .
 
 RUN pip install -r requirements.txt
 

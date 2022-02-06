@@ -75,6 +75,46 @@ def mock_threshold(*args):
         }.get(args[1], [])
 
 
+def mock_case2(*args):
+    if args[0] == InfoOptions.following:
+        return {
+            "AlienVault": ["f1"]
+        }.get(args[1], [])
+    else:
+        return {
+            "f1": ["f2"],
+            "f2": ["f3"],
+            "f3": ["f4"],
+            "f4": ["f5"],
+            "f5": ["f6"],
+            "f6": ["f7", "AlienVault"],
+            "f7": ["f8"],
+            "f8": ["f9"],
+            "f9": ["f10"],
+            "f10": ["f11"],
+            "f11": ["f12"],
+            "f12": ["target", "AlienVault"],
+            "target": ["f12", "AlienVault"]
+        }.get(args[1], [])
+
+
+def mock_case3(*args):
+    if args[0] == InfoOptions.following:
+        return {
+            "AlienVault": ["f3"],
+            "f2": ["f7", "f10"],
+            "f3": ["f5", "f6", "f7"],
+            "f4": ["AlienVault", "f11"]
+        }.get(args[1], [])
+    else:
+        return {
+            "AlienVault": ["f2", "f3", "f4"],
+            "f2": ["f5", "f6"],
+            "f3": ["f7"],
+            "f4": ["f6", "f8", "f9"]
+        }.get(args[1], [])
+
+
 class GetTrustedUsersTestCase(unittest.TestCase):
     @mock.patch("main.get_watched_users", side_effect=mock_empty)
     def test_empty(self, mock_get):
@@ -117,6 +157,26 @@ class GetTrustedUsersTestCase(unittest.TestCase):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {'f1', "f2", "f3", "f4", "f5", "f6", "f7"})
         self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
+
+    @mock.patch("main.get_watched_users", side_effect=mock_case2)
+    def test_case2(self, mock_get):
+        result = get_trusted_users("AlienVault", 0)
+        self.assertEqual(result[0], set())
+        self.assertEqual(result[1], {"AlienVault"})
+        result = get_trusted_users("AlienVault", 1)
+        self.assertEqual(result[0],
+                         {'f1', "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "target"})
+        self.assertEqual(result[1], {"AlienVault"})
+        result = get_trusted_users("AlienVault", 2)
+        self.assertEqual(result[0],
+                         {'f1', "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "target"})
+        self.assertEqual(result[1], {"AlienVault"})
+
+    @mock.patch("main.get_watched_users", side_effect=mock_case3)
+    def test_case3(self, mock_get):
+        result = get_trusted_users("AlienVault", 7)
+        self.assertEqual(result[0], {"f10", "f11"})
+        self.assertEqual(result[1], {'AlienVault', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9'})
 
 
 if __name__ == "__main__":
