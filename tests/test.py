@@ -1,6 +1,6 @@
 import unittest
 from unittest import mock
-from main import get_trusted_users, InfoOptions
+from users_algo import get_trusted_users, InfoOptions
 
 
 def mock_empty(*args):
