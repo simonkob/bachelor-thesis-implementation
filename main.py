@@ -2,6 +2,7 @@ from OTXv2 import OTXv2
 from app import App
 import datetime
 import configparser
+import json
 import os
 
 otx = OTXv2("65c4b1a25b5896043ef4dfd0b38ea42a5910abac8f4fd19e79f83fda68965eeb")
@@ -11,6 +12,13 @@ is_in_docker = os.getenv('IS_IN_DOCKER', False)
 def create_pulses(app_, since=None):
     for pulse in otx.getall_iter(modified_since=since):
         app_.create_pulse(pulse)
+
+
+def import_attack_json(app_):
+    with open("test_json.json") as file:
+        data = json.load(file)
+    for item in data["objects"]:
+        app_.create_attack_item(item)
 
 
 def load_timestamp(config_):

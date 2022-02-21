@@ -14,6 +14,64 @@ class App:
             session.write_transaction(self._create_pulse, pulse)
             print(f"Created or modified pulse with name: {pulse.get('name')}")
 
+    def create_attack_item(self, item):
+        with self.driver.session() as session:
+            session.write_transaction(self._create_attack_item, item)
+
+    @staticmethod
+    def _create_attack_item(tx, item):
+        match item["type"]:
+            case "attack-pattern":
+                query = App._create_attack_pattern(item)
+                if item.get('kill_chain_phases'):
+                    tx.run(query, kill_chain_phases=item['kill_chain_phases'])
+                    return
+            case "intrusion-set":
+                return
+            case "malware":
+                return
+            case "x-mitre-tactic":
+                query = App._create_attack_tactic(item)
+                tx.run(query, ext_ref=item['external_references'])
+                return
+            case "relationship":
+                return
+            case _:
+                return
+
+    @staticmethod
+    def _create_attack_pattern(attack):
+        query = (''.join((
+            f"MERGE (a:Attack_pattern {{name: '{attack['name']}'}}) ",  # When 2 have same name? -> napr. "Accessibility Features" tam je 2krat
+            f"SET a.description = '{attack['description']}'" if attack.get('description') else "",  # Problem s file paths -> napr. \u v stringu
+            f"WITH a UNWIND {attack['x_mitre_data_sources']} as data_source "
+            "MERGE (d:Data_source {name: data_source}) "
+            "MERGE (a)-[:HAS_DATA_SOURCE]->(d) " if attack.get('x_mitre_data_sources') else "",
+            f"WITH a UNWIND {attack['x_mitre_permissions_required']} as permission "
+            "MERGE (perm:Permission {name: permission}) "
+            "MERGE (a)-[:REQUIRES]->(perm) " if attack.get('x_mitre_permissions_required') else "",
+            f"WITH a UNWIND {attack['x_mitre_platforms']} as platform "
+            "MERGE (p:Platform {name: platform}) "
+            "MERGE (a)-[:ON_PLATFORM]->(p) " if attack.get('x_mitre_platforms') else "",
+            f"WITH a UNWIND $kill_chain_phases as phase "
+            "CALL apoc.merge.node(['Kill_chain_phase'], {name: phase['phase_name']}) "
+            "YIELD node "
+            "MERGE (a)-[:HAS_PHASE]->(node)" if attack.get('kill_chain_phases') else "",
+            "RETURN *"))  # Z ext ref ATT&CK, CAPEC a CVE
+        )
+        return query
+
+    @staticmethod
+    def _create_attack_tactic(tactic):
+        query = (''.join((
+            f"MERGE (t:Tactic {{name: '{tactic['name']}'}}) "
+            f'SET t.description = "{tactic["description"]}" '
+            f"WITH t UNWIND $ext_ref as ex_ref "
+            "SET t.id = ex_ref['external_id'] "
+            "RETURN *"))
+        )
+        return query
+
     @staticmethod
     def _create_pulse(tx, pulse):
         query = (''.join((
