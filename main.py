@@ -5,7 +5,7 @@ import configparser
 import json
 import os
 
-otx = OTXv2("65c4b1a25b5896043ef4dfd0b38ea42a5910abac8f4fd19e79f83fda68965eeb")
+otx = OTXv2(api_key)  # Replace with your own OTX api key
 is_in_docker = os.getenv('IS_IN_DOCKER', False)
 
 

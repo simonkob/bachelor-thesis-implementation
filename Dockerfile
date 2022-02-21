@@ -6,6 +6,10 @@ WORKDIR /home/app
 
 ENV IS_IN_DOCKER=yes
 
+WORKDIR /home/app
+
+ENV IS_IN_DOCKER=yes
+
 COPY main.py .
 COPY app.py .
 COPY requirements.txt .
