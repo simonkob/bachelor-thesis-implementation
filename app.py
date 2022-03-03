@@ -1,4 +1,5 @@
 from neo4j import GraphDatabase
+import re
 
 
 class App:
@@ -22,17 +23,18 @@ class App:
     def _create_attack_item(tx, item):
         match item["type"]:
             case "attack-pattern":
-                query = App._create_attack_pattern(item)
-                if item.get('kill_chain_phases'):
-                    tx.run(query, kill_chain_phases=item['kill_chain_phases'])
-                    return
+                tx.run(App._create_attack_pattern(item), desc=item.get('description'),
+                       kill_chain_phases=item.get('kill_chain_phases'))
+                return
             case "intrusion-set":
+                tx.run(App._create_attack_intrusion(item), ext_ref=item.get('external_references'),
+                       desc=item.get('description'))
                 return
             case "malware":
+                tx.run(App._create_attack_malware(item), desc=item.get('description'))
                 return
             case "x-mitre-tactic":
-                query = App._create_attack_tactic(item)
-                tx.run(query, ext_ref=item['external_references'])
+                tx.run(App._create_attack_tactic(item))
                 return
             case "relationship":
                 return
@@ -42,8 +44,9 @@ class App:
     @staticmethod
     def _create_attack_pattern(attack):
         query = (''.join((
-            f"MERGE (a:Attack_pattern {{name: '{attack['name']}'}}) ",  # When 2 have same name? -> napr. "Accessibility Features" tam je 2krat
-            f"SET a.description = '{attack['description']}'" if attack.get('description') else "",  # Problem s file paths -> napr. \u v stringu
+            f"MERGE (a:Attack_pattern {{id: '{attack['external_references'][0]['external_id']}'}}) ",
+            f'SET a.name = "{attack["name"]}" ',
+            f'SET a.description = $desc ' if attack.get('description') else "",
             f"WITH a UNWIND {attack['x_mitre_data_sources']} as data_source "
             "MERGE (d:Data_source {name: data_source}) "
             "MERGE (a)-[:HAS_DATA_SOURCE]->(d) " if attack.get('x_mitre_data_sources') else "",
@@ -57,19 +60,69 @@ class App:
             "CALL apoc.merge.node(['Kill_chain_phase'], {name: phase['phase_name']}) "
             "YIELD node "
             "MERGE (a)-[:HAS_PHASE]->(node)" if attack.get('kill_chain_phases') else "",
-            "RETURN *"))  # Z ext ref ATT&CK, CAPEC a CVE
+            App._find_CVE(attack['external_references'], "a"),
+            "RETURN *"))  # Z ext ref CAPEC
+        )
+        return query
+
+    @staticmethod
+    def _create_attack_intrusion(intrusion):
+        query = (''.join((
+            f'MERGE (i:Intrusion_set {{id: "{intrusion["external_references"][0]["external_id"]}"}}) '
+            f'SET i.name = "{intrusion["name"]}" ',
+            f'SET i.aliases = "{intrusion["aliases"]}" ' if intrusion.get('aliases') else "",
+            f'SET i.description = $desc ' if intrusion.get('description') else "",
+            App._find_CVE(intrusion["external_references"], "i"),
+            "RETURN *"))
         )
         return query
 
     @staticmethod
     def _create_attack_tactic(tactic):
         query = (''.join((
-            f"MERGE (t:Tactic {{name: '{tactic['name']}'}}) "
-            f'SET t.description = "{tactic["description"]}" '
-            f"WITH t UNWIND $ext_ref as ex_ref "
-            "SET t.id = ex_ref['external_id'] "
+            f'MERGE (t:Tactic {{id: "{tactic["external_references"][0]["external_id"]}"}}) '
+            f'SET t.name = "{tactic["name"]}", t.description = "{tactic["description"]}" '
             "RETURN *"))
         )
+        return query
+
+    @staticmethod
+    def _create_attack_malware(malware):
+        query = (''.join((
+            f'MERGE (m:Malware {{id: "{malware["external_references"][0]["external_id"]}"}}) '
+            f'SET m.name = "{malware["name"]}" ',
+            f'SET m.description = $desc ' if malware.get('description') else "",
+            f'SET m.aliases = "{malware["x_mitre_aliases"]}" '
+            f"WITH m UNWIND {malware['x_mitre_platforms']} as platform "
+            "MERGE (p:Platform {name: platform}) "
+            "MERGE (m)-[:ON_PLATFORM]->(p) " if malware.get('x_mitre_platforms') else "",
+            App._find_CVE(malware["external_references"], "m"),
+            "RETURN *"))
+        )
+        return query
+
+    @staticmethod
+    def _create_attack_relationship(relationship):
+        query = (''.join((
+
+            ))
+        )
+        return query
+
+    @staticmethod
+    def _find_CVE(external_refs, variable_name):
+        cve_list = []
+        query = ""
+        for ref in external_refs:
+            if not ref.get('description'):
+                continue
+            re_match_object = re.search('\\bCVE-\\d{4}-\\d{4,}\\b', ref['description'])
+            if re_match_object:
+                cve_list.append(re_match_object.group())
+        if cve_list:
+            query = f"FOREACH (item in {cve_list} | " \
+                    f"MERGE (c:CVE {{id: item}}) " \
+                    f"MERGE ({variable_name})-[:USES_CVE]->(c)) "
         return query
 
     @staticmethod

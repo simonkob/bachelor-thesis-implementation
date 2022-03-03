@@ -15,7 +15,7 @@ def create_pulses(app_, since=None):
 
 
 def import_attack_json(app_):
-    with open("test_json.json") as file:
+    with open("enterprise-attack-10.1.json") as file:
         data = json.load(file)
     for item in data["objects"]:
         app_.create_attack_item(item)
