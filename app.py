@@ -21,6 +21,8 @@ class App:
 
     @staticmethod
     def _create_attack_item(tx, item):
+        if item.get("revoked"):
+            return
         match item["type"]:
             case "attack-pattern":
                 tx.run(App._create_attack_pattern(item), desc=item.get('description'),
