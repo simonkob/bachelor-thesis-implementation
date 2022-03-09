@@ -53,9 +53,9 @@ class App:
     @staticmethod
     def _create_attack_pattern(attack):
         query = (''.join((
-            f"MERGE (a:Attack_pattern {{id: '{attack['external_references'][0]['external_id']}'}}) ",
-            f'SET a.name = "{attack["name"]}" ',
-            f'SET a.description = $desc ' if attack.get('description') else "",
+            f"MERGE (a:Attack_pattern {{id: '{attack['external_references'][0]['external_id']}'}}) "
+            f'SET a.name = "{attack["name"]}" '
+            f'SET a.description = $desc ',
             f"WITH a UNWIND {attack['x_mitre_data_sources']} as data_source "
             "MERGE (d:Data_source {name: data_source}) "
             "MERGE (a)-[:HAS_DATA_SOURCE]->(d) " if attack.get('x_mitre_data_sources') else "",
@@ -70,7 +70,8 @@ class App:
             "YIELD node "
             "MERGE (a)-[:HAS_PHASE]->(node)" if attack.get('kill_chain_phases') else "",
             App._find_CVE(attack['external_references'], "a"),
-            "RETURN *"))  # Z ext ref CAPEC
+            App._find_CAPEC(attack['external_references'], "a"),
+            "RETURN *"))
         )
         return query
 
@@ -130,9 +131,22 @@ class App:
         return id_string.partition("--")[0].replace('-', '_').capitalize()
 
     @staticmethod
+    def _find_CAPEC(external_refs, variable_name):
+        capec_list = []
+        for ref in external_refs:
+            if ref.get("source_name") == "capec":
+                capec_list.append(ref.get("external_id"))
+            if ref.get("description"):
+                break
+        if capec_list:
+            return f"FOREACH (item in {capec_list} | " \
+                    f"MERGE (c:CAPEC {{id: item}}) " \
+                    f"MERGE ({variable_name})-[:REFERENCES]->(c)) "
+        return ""
+
+    @staticmethod
     def _find_CVE(external_refs, variable_name):
         cve_list = []
-        query = ""
         for ref in external_refs:
             if not ref.get('description'):
                 continue
@@ -140,10 +154,10 @@ class App:
             if re_match_object:
                 cve_list.append(re_match_object.group())
         if cve_list:
-            query = f"FOREACH (item in {cve_list} | " \
+            return f"FOREACH (item in {cve_list} | " \
                     f"MERGE (c:CVE {{id: item}}) " \
                     f"MERGE ({variable_name})-[:USES_CVE]->(c)) "
-        return query
+        return ""
 
     @staticmethod
     def _create_pulse(tx, pulse):
