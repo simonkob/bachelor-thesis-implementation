@@ -15,30 +15,37 @@ class App:
             session.write_transaction(self._create_pulse, pulse)
             print(f"Created or modified pulse with name: {pulse.get('name')}")
 
-    def create_attack_item(self, item):
+    def create_attack_item(self, item, json_objects_dict):
         with self.driver.session() as session:
-            session.write_transaction(self._create_attack_item, item)
+            session.write_transaction(self._create_attack_item, item, json_objects_dict)
 
     @staticmethod
-    def _create_attack_item(tx, item):
+    def _create_attack_item(tx, item, json_objects_dict):
         if item.get("revoked"):
             return
         match item["type"]:
             case "attack-pattern":
+                json_objects_dict.update({item.get("id"): item.get('external_references')[0]['external_id']})
                 tx.run(App._create_attack_pattern(item), desc=item.get('description'),
                        kill_chain_phases=item.get('kill_chain_phases'))
                 return
             case "intrusion-set":
+                json_objects_dict.update({item.get("id"): item.get('external_references')[0]['external_id']})
                 tx.run(App._create_attack_intrusion(item), ext_ref=item.get('external_references'),
                        desc=item.get('description'))
                 return
             case "malware":
+                json_objects_dict.update({item.get("id"): item.get('external_references')[0]['external_id']})
                 tx.run(App._create_attack_malware(item), desc=item.get('description'))
                 return
             case "x-mitre-tactic":
+                json_objects_dict.update({item.get("id"): item.get('external_references')[0]['external_id']})
                 tx.run(App._create_attack_tactic(item))
                 return
             case "relationship":
+                if App._get_type(item.get("source_ref")) in ("Malware", "Attack_pattern", "Intrusion_set") \
+                        and App._get_type(item.get("target_ref")) in ("Malware", "Attack_pattern", "Intrusion_set"):
+                    tx.run(App._create_attack_relationship(item, json_objects_dict))
                 return
             case _:
                 return
@@ -104,12 +111,23 @@ class App:
         return query
 
     @staticmethod
-    def _create_attack_relationship(relationship):
+    def _create_attack_relationship(relationship, json_objects_dict):
+        source = relationship.get("source_ref")
+        source_type = App._get_type(source)
+        target = relationship.get("target_ref")
+        target_type = App._get_type(target)
         query = (''.join((
-
+            f'MERGE (a:{source_type} {{id: "{json_objects_dict.get(source)}"}}) '
+            f'MERGE (b:{target_type} {{id: "{json_objects_dict.get(target)}"}}) '
+            f'MERGE (a)-[:{relationship.get("relationship_type").replace("-", "_").upper()}]->(b) '
+            f'RETURN *'
             ))
         )
         return query
+
+    @staticmethod
+    def _get_type(id_string):
+        return id_string.partition("--")[0].replace('-', '_').capitalize()
 
     @staticmethod
     def _find_CVE(external_refs, variable_name):
