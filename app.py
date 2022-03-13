@@ -65,10 +65,7 @@ class App:
             f"WITH a UNWIND {attack['x_mitre_platforms']} as platform "
             "MERGE (p:Platform {name: platform}) "
             "MERGE (a)-[:ON_PLATFORM]->(p) " if attack.get('x_mitre_platforms') else "",
-            f"WITH a UNWIND $kill_chain_phases as phase "
-            "CALL apoc.merge.node(['Kill_chain_phase'], {name: phase['phase_name']}) "
-            "YIELD node "
-            "MERGE (a)-[:HAS_PHASE]->(node)" if attack.get('kill_chain_phases') else "",
+            App._get_tactics(attack.get("kill_chain_phases")),
             App._find_CVE(attack['external_references'], "a"),
             App._find_CAPEC(attack['external_references'], "a"),
             "RETURN *"))
@@ -129,6 +126,17 @@ class App:
     @staticmethod
     def _get_type(id_string):
         return id_string.partition("--")[0].replace('-', '_').capitalize()
+
+    @staticmethod
+    def _get_tactics(kill_chain_phases):
+        tactics = []
+        for tactic in kill_chain_phases:
+            tactics.append(tactic.get("phase_name").replace('-', ' ').title())
+        if tactics:
+            return f"FOREACH (item in {tactics} | " \
+                    f"MERGE (t:Tactic {{name: item}}) " \
+                    f"MERGE (a)-[:USES_TACTIC]->(t)) "
+        return ""
 
     @staticmethod
     def _find_CAPEC(external_refs, variable_name):
