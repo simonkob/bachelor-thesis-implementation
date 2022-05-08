@@ -7,15 +7,17 @@ import os
 
 otx = OTXv2(api_key)  # Replace with your own OTX api key
 is_in_docker = os.getenv('IS_IN_DOCKER', False)
+config = configparser.ConfigParser()
 
 
 def create_pulses(app_, since=None):
     for pulse in otx.getall_iter(modified_since=since):
         app_.create_pulse(pulse)
+    save_timestamp(config)
 
 
 def import_attack_json(app_):
-    with open("test_json.json") as file:
+    with open("enterprise-attack-10.1.json") as file:
         data = json.load(file)
     json_objects_dict = {}
     for item in data["objects"]:
@@ -34,7 +36,6 @@ def save_timestamp(config_):
 
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
     if is_in_docker:
         bolt_url = "bolt://neo4j_db:7687"
     else:
@@ -44,4 +45,3 @@ if __name__ == '__main__':
     app = App(bolt_url, user, password)
     create_pulses(app, load_timestamp(config))
     app.close()
-    save_timestamp(config)
