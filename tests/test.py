@@ -116,31 +116,31 @@ def mock_case3(*args):
 
 
 class GetTrustedUsersTestCase(unittest.TestCase):
-    @mock.patch("main.get_watched_users", side_effect=mock_empty)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_empty)
     def test_empty(self, mock_get):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], set())
         self.assertEqual(result[1], {'AlienVault'})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_basic)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_basic)
     def test_basic(self, mock_get):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {'user1', 'user2'})
         self.assertEqual(result[1], {'AlienVault', 'user3', 'user4'})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_case1)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_case1)
     def test_case1(self, mock_get):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {'user1', 'user2', 'user3', 'user4'})
         self.assertEqual(result[1], {'AlienVault'})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_repeat)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_repeat)
     def test_repeat(self, mock_get):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {'u2'})
         self.assertEqual(result[1], {'AlienVault', 'u1', 'u3', 'u4'})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_threshold)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_threshold)
     def test_threshold(self, mock_get):
         result = get_trusted_users("AlienVault", 1)
         self.assertEqual(result[0], {'f1'})
@@ -158,7 +158,7 @@ class GetTrustedUsersTestCase(unittest.TestCase):
         self.assertEqual(result[0], {'f1', "f2", "f3", "f4", "f5", "f6", "f7"})
         self.assertEqual(result[1], {'AlienVault', 's1', 's2', 's3', 's4', 's5', 's6', 's7'})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_case2)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_case2)
     def test_case2(self, mock_get):
         result = get_trusted_users("AlienVault", 0)
         self.assertEqual(result[0], set())
@@ -172,7 +172,7 @@ class GetTrustedUsersTestCase(unittest.TestCase):
                          {'f1', "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "target"})
         self.assertEqual(result[1], {"AlienVault"})
 
-    @mock.patch("main.get_watched_users", side_effect=mock_case3)
+    @mock.patch("users_algo.get_watched_users", side_effect=mock_case3)
     def test_case3(self, mock_get):
         result = get_trusted_users("AlienVault", 7)
         self.assertEqual(result[0], {"f10", "f11"})
