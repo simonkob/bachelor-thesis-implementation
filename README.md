@@ -4,7 +4,7 @@ Implementation of bachelor's thesis on topic of Gathering Information from Commu
 
 ## Before running
 
-Replace api_key with your own OTX api key. You can get it [here](https://otx.alienvault.com/api) after logging in or signing up.
+Replace api_key in [main.py](https://gitlab.fi.muni.cz/xbezek2/bachelor-thesis-implementation/-/blob/master/main.py) and [users_algo.py](https://gitlab.fi.muni.cz/xbezek2/bachelor-thesis-implementation/-/blob/master/users_algo.py) with your own OTX api key. You can get it [here](https://otx.alienvault.com/api) after logging in or signing up.
 
 ## Run locally
 
