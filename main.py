@@ -39,7 +39,7 @@ def load_attack_ver(config_):
 
 
 def save_attack_ver(config_, version):
-    config_['Info'] = {'Attack_ver': version}
+    config_.set('Info', 'Attack_ver', version)
     with open('config.ini', 'w') as config_file:
         config_.write(config_file)
 
@@ -50,7 +50,7 @@ def load_timestamp(config_):
 
 
 def save_timestamp(config_):
-    config_['Info'] = {'Date': datetime.datetime.now()}
+    config_.set('Info', 'Date', str(datetime.datetime.now()))
     with open('config.ini', 'w') as config_file:
         config_.write(config_file)
 
