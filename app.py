@@ -8,19 +8,37 @@ class App:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
 
     def close(self):
+        """Closes the connection to the database
+        """
         self.driver.close()
 
     def create_pulse(self, pulse):
+        """Creates a pulse record in the database
+
+        :param pulse: Pulse to be created
+        """
         with self.driver.session() as session:
             session.write_transaction(self._create_pulse, pulse)
             print(f"Created or modified pulse with name: {pulse.get('name')}")
 
     def create_attack_item(self, item, json_objects_dict):
+        """Creates a record in the database for an object from MITRE ATT&CK json
+
+        :param item: An object from MITRE ATT&CK json
+        :param json_objects_dict: Dictionary of already imported objects
+        """
         with self.driver.session() as session:
             session.write_transaction(self._create_attack_item, item, json_objects_dict)
 
     @staticmethod
     def _create_attack_item(tx, item, json_objects_dict):
+        """Creates a correct cypher query for an object from MITRE ATT&CK json, adds it to json_objects_dict dictionary
+         and executes it
+
+        :param tx: Transaction
+        :param item: An object from MITRE ATT&CK json
+        :param json_objects_dict: Dictionary of already imported objects
+        """
         if item.get("revoked"):
             return
         match item["type"]:
@@ -52,6 +70,11 @@ class App:
 
     @staticmethod
     def _create_attack_pattern(attack):
+        """Creates a cypher query for an attack_pattern object from MITRE ATT&CK json
+
+        :param attack: Attack_pattern object from MITRE ATT&CK json
+        :return: String of a cypher query for attack_pattern object
+        """
         query = (''.join((
             f"MERGE (a:Attack_pattern {{id: '{attack['external_references'][0]['external_id']}'}}) "
             f'SET a.name = "{attack["name"]}" '
@@ -74,6 +97,11 @@ class App:
 
     @staticmethod
     def _create_attack_intrusion(intrusion):
+        """Creates a cypher query for an intrusion object from MITRE ATT&CK json
+
+        :param intrusion: Intrusion object from MITRE ATT&CK json
+        :return: String of a cypher query for intrusion object
+        """
         query = (''.join((
             f'MERGE (i:Intrusion_set {{id: "{intrusion["external_references"][0]["external_id"]}"}}) '
             f'SET i.name = "{intrusion["name"]}" ',
@@ -86,6 +114,11 @@ class App:
 
     @staticmethod
     def _create_attack_tactic(tactic):
+        """Creates a cypher query for an tactic object from MITRE ATT&CK json
+
+        :param tactic: Tactic object from MITRE ATT&CK json
+        :return: String of a cypher query for tactic object
+        """
         query = (''.join((
             f'MERGE (t:Tactic {{id: "{tactic["external_references"][0]["external_id"]}"}}) '
             f'SET t.name = "{tactic["name"]}", t.description = "{tactic["description"]}" '
@@ -95,6 +128,11 @@ class App:
 
     @staticmethod
     def _create_attack_malware(malware):
+        """Creates a cypher query for an malware object from MITRE ATT&CK json
+
+        :param malware: Malware object from MITRE ATT&CK json
+        :return: String of a cypher query for malware object
+        """
         query = (''.join((
             f'MERGE (m:Malware {{id: "{malware["external_references"][0]["external_id"]}"}}) '
             f'SET m.name = "{malware["name"]}" ',
@@ -110,6 +148,12 @@ class App:
 
     @staticmethod
     def _create_attack_relationship(relationship, json_objects_dict):
+        """Creates a cypher query for an relationship object from MITRE ATT&CK json
+
+        :param relationship: Relationship object from MITRE ATT&CK json
+        :param json_objects_dict: Dictionary of already imported objects
+        :return: String of a cypher query for relationship object
+        """
         source = relationship.get("source_ref")
         source_type = App._get_type(source)
         target = relationship.get("target_ref")
@@ -125,10 +169,20 @@ class App:
 
     @staticmethod
     def _get_type(id_string):
+        """Gets the type of an object
+
+        :param id_string: String of a MITRE ATT&CK object
+        :return: Capitalized string of the type of an object
+        """
         return id_string.partition("--")[0].replace('-', '_').capitalize()
 
     @staticmethod
     def _get_tactics(kill_chain_phases):
+        """Creates a cypher query for an attack_pattern's tactics
+
+        :param kill_chain_phases: List of tactics
+        :return: String of a cypher query for an attack_pattern's tactics
+        """
         tactics = []
         for tactic in kill_chain_phases:
             tactics.append(tactic.get("phase_name").replace('-', ' ').title())
@@ -140,6 +194,12 @@ class App:
 
     @staticmethod
     def _find_CAPEC(external_refs, variable_name):
+        """Finds CAPEC references in external references of a MITRE ATT&CK object and creates a cypher query to add them
+
+        :param external_refs: External references of an object
+        :param variable_name: Name of the variable in the cypher query
+        :return: String of a cypher query for CAPEC references
+        """
         capec_list = []
         for ref in external_refs:
             if ref.get("source_name") == "capec":
@@ -154,6 +214,12 @@ class App:
 
     @staticmethod
     def _find_CVE(external_refs, variable_name):
+        """Finds CVE references in external references of a MITRE ATT&CK object and creates a cypher query to add them
+
+        :param external_refs: External references of an object
+        :param variable_name: Name of the variable in the cypher query
+        :return: String of a cypher query for CVE references
+        """
         cve_list = []
         for ref in external_refs:
             if not ref.get('description'):
@@ -169,6 +235,11 @@ class App:
 
     @staticmethod
     def _create_pulse(tx, pulse):
+        """Creates a cypher query for a pulse and executes it
+
+        :param tx: Transaction
+        :param pulse: Pulse from OTX
+        """
         query = (''.join((
             "MERGE (u:User { name: $author_name }) "
             "MERGE (p:Pulse { id: $pulse_id}) ",
@@ -206,6 +277,14 @@ class App:
 
     @staticmethod
     def _create_pulse_subquery(node_type, relationship_name, arr, attribute_name="name"):
+        """Creates a part of a cypher query for a list items of a pulse
+
+        :param node_type: Type of node
+        :param relationship_name: Name of the relationship
+        :param arr: List of items
+        :param attribute_name: Name of the attribute
+        :return: String of a part of a cypher query
+        """
         if not arr:
             return ""
         else:
@@ -215,6 +294,11 @@ class App:
 
     @staticmethod
     def _create_attacks_subquery(attacks):
+        """Creates a part of a cypher query for ATT&CK references of a pulse
+
+        :param attacks: List of ATT&CK references
+        :return: String of a part of a cypher query
+        """
         if not attacks:
             return ""
         else:
