@@ -1,0 +1,89 @@
+Analysis01: Count of pulses based on the number of CVE IDs
+
+MATCH (a:Pulse)
+WITH count(a) as every_pulse
+MATCH (p:Pulse)-[:HAS_INDICATOR]->(i:CVE)
+RETURN 0 as cve_count, every_pulse - count(distinct p) as pulse_count
+UNION
+UNWIND range(0,50) as cve_count
+MATCH (p:Pulse)-[:HAS_INDICATOR]->(c:CVE)
+WITH cve_count, p, count(c) as rels WHERE rels = cve_count
+MATCH (p)
+WITH cve_count, count(p) as pulse_count
+RETURN cve_count, pulse_count
+
+
+Analysis02: Count of CVE IDs based on the number of pulses
+
+UNWIND range(0,100) as pulses
+MATCH (p:Pulse)-[:HAS_INDICATOR]->(c:CVE)
+WITH pulses, c, count(p) as rels WHERE rels = pulses
+MATCH (c)
+WITH pulses, count(c) as cve_count
+RETURN pulses, cve_count
+
+
+Analysis03: Count of CVE references
+
+MATCH (c:CVE) RETURN count(c)
+
+
+Analysis04: Count of pulses based on the number of ATT&CKs
+
+MATCH (a:Pulse)
+WITH count(a) as every_pulse
+MATCH (p:Pulse)-[:HAS_ATTACK]->(c:Attack)
+RETURN 0 as attack_count, every_pulse - count(distinct p) as pulse_count
+UNION
+UNWIND range(0,200) as attack_count
+MATCH (p:Pulse)-[:HAS_ATTACK]->(c:Attack)
+WITH attack_count, p, count(c) as rels WHERE rels = attack_count
+MATCH (p)
+WITH attack_count, count(p) as pulse_count
+RETURN attack_count, pulse_count
+
+
+Analysis05: Count of ATT&CKs based on the number of pulses
+
+UNWIND range(0,400) as pulses
+MATCH (p:Pulse)-[:HAS_ATTACK]->(a:Attack)
+WITH pulses, a, count(p) as rels WHERE rels = pulses
+MATCH (a)
+WITH pulses, count(a) as attack_count
+RETURN pulses, attack_count
+
+
+Analysis06: Count of ATT&CK references
+
+MATCH (a:Attack) return count(a)
+
+
+Analysis07: Pulses with both CVE and ATT&CK reference
+
+MATCH (p:Pulse)
+WHERE (p)-[:HAS_INDICATOR]->(:CVE)
+AND (p)-[:HAS_ATTACK]->(:Attack)
+RETURN COUNT(p)
+
+
+Analysis08: Common malware from OTX and MITRE ATT&CK 
+
+match (m:Malware)
+match (n:Malware_family)
+where m.name = n.name
+return (m.name)
+
+
+Analysis09: Top 10 targeted countries based on the number of pulses
+
+MATCH (p:Pulse)-[:TARGETS]->(c:Country)
+RETURN c.name as Country, COUNT(c) as Number
+ORDER BY Number DESC LIMIT 10
+
+
+Analysis10: Top 10 popular adversaries
+
+MATCH (p:Pulse)-[:HAS_ADVERSARY]->(a:Adversary)
+RETURN a.name as Adversary, COUNT(a) as Number
+ORDER BY Number DESC LIMIT 10
+
