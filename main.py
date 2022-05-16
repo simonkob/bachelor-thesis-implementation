@@ -84,6 +84,34 @@ def save_timestamp(config_):
         config_.write(config_file)
 
 
+def get_option_input(prompt):
+    """Gets an input from the user to choose which data will be updated
+
+    :param prompt: Message displayed to the user
+    :return: True = update pulses from OTX, False = update MITRE ATT&CK json
+    """
+    while True:
+        value = input(prompt)
+        if value in ("1", "1.", "a"):
+            return True
+        if value in ("2", "2.", "b"):
+            return False
+        print("Invalid selection, try again.")
+
+
+def choose_source(app_, config_):
+    """Asks user to select which data source should updated and runs the corresponding function
+
+    :param app_: A database connection
+    :param config_: Configuration file
+    """
+    print("Choose which data should be updated:\n1. The Open Threat Exchange (OTX)\n2. MITRE ATT&CK")
+    if get_option_input("Select an option (1 or 2): "):
+        create_pulses(app_, load_timestamp(config_))
+    else:
+        import_attack_json(app_, config_)
+
+
 if __name__ == '__main__':
     if is_in_docker:
         bolt_url = "bolt://neo4j_db:7687"
@@ -92,5 +120,5 @@ if __name__ == '__main__':
     user = "neo4j"
     password = "1234"
     app = App(bolt_url, user, password)
-    create_pulses(app, load_timestamp(config))
+    choose_source(app, config)
     app.close()
