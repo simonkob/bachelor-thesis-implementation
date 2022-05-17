@@ -11,77 +11,72 @@ from app import App
 otx = OTXv2(api_key)  # Replace with your own OTX api key
 is_in_docker = os.getenv('IS_IN_DOCKER', False)
 config = configparser.ConfigParser()
+config.add_section('Info')
 
 
-def create_pulses(app_, since=None):
+def create_pulses(app_):
     """Creates a pulse record in the database for every pulse that has been modified since 'since' argument.
 
     :param app_: A database connection
-    :param since: Date of last modification
     """
+    since = load_timestamp()
     for pulse in otx.getall_iter(modified_since=since):
         app_.create_pulse(pulse)
-    save_timestamp(config)
+    save_timestamp()
 
 
-def import_attack_json(app_, config_):
+def import_attack_json(app_):
     """Imports data from MITRE ATT&CK json
 
     :param app_: A database connection
-    :param config_: Configuration file
     """
     url = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack" \
           ".json "
     data = json.loads(urllib.request.urlopen(url).read())
     data_version = data["objects"][0]["x_mitre_version"]
-    if data_version != load_attack_ver(config_):
+    if data_version != load_attack_ver():
         json_objects_dict = {}
         for item in data["objects"]:
             app_.create_attack_item(item, json_objects_dict)
-        save_attack_ver(config_, data_version)
+        save_attack_ver(data_version)
     else:
         print("Latest MITRE ATT&CK already imported.")
 
 
-def load_attack_ver(config_):
+def load_attack_ver():
     """Loads the last imported attack version from the configuration file
 
-    :param config_: Configuration file
     :return: String of the last attack version
     """
-    config_.read('config.ini')
-    return config_.get('Info', 'Attack_ver', fallback=None)
+    config.read('./config.ini')
+    return config.get('Info', 'Attack_ver', fallback=None)
 
 
-def save_attack_ver(config_, version):
+def save_attack_ver(version):
     """Saves the last imported attack version to the configuration file
 
-    :param config_: Configuration file
     :param version: Attack version to be saved
     """
-    config_.set('Info', 'Attack_ver', version)
-    with open('config.ini', 'w') as config_file:
-        config_.write(config_file)
+    config.set('Info', 'Attack_ver', version)
+    with open('./config.ini', 'w') as config_file:
+        config.write(config_file)
 
 
-def load_timestamp(config_):
+def load_timestamp():
     """Loads the date when pulses from OTX were last updated from configuration file
 
-    :param config_: Configuration file
     :return: String of the date when pulses were last updated
     """
-    config_.read('config.ini')
-    return config_.get('Info', 'Date', fallback=None)
+    config.read('./config.ini')
+    return config.get('Info', 'Date', fallback=None)
 
 
-def save_timestamp(config_):
+def save_timestamp():
     """Saves the date when pulses from OTX were last updated to configuration file
-
-    :param config_: Configuration file
     """
-    config_.set('Info', 'Date', str(datetime.datetime.now()))
-    with open('config.ini', 'w') as config_file:
-        config_.write(config_file)
+    config.set('Info', 'Date', str(datetime.datetime.now()))
+    with open('./config.ini', 'w') as config_file:
+        config.write(config_file)
 
 
 def get_option_input(prompt):
@@ -99,17 +94,16 @@ def get_option_input(prompt):
         print("Invalid selection, try again.")
 
 
-def choose_source(app_, config_):
+def choose_source(app_):
     """Asks user to select which data source should updated and runs the corresponding function
 
     :param app_: A database connection
-    :param config_: Configuration file
     """
     print("Choose which data should be updated:\n1. The Open Threat Exchange (OTX)\n2. MITRE ATT&CK")
     if get_option_input("Select an option (1 or 2): "):
-        create_pulses(app_, load_timestamp(config_))
+        create_pulses(app_)
     else:
-        import_attack_json(app_, config_)
+        import_attack_json(app_)
 
 
 if __name__ == '__main__':
@@ -120,5 +114,5 @@ if __name__ == '__main__':
     user = "neo4j"
     password = "1234"
     app = App(bolt_url, user, password)
-    choose_source(app, config)
+    choose_source(app)
     app.close()
