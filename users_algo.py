@@ -2,6 +2,7 @@ from OTXv2 import OTXv2, NotFound, BadRequest, InvalidAPIKey, RetryError
 from enum import Enum
 import datetime
 from time import sleep
+from collections import deque
 
 otx = OTXv2(api_key)
 
@@ -11,18 +12,21 @@ class InfoOptions(Enum):
     subscribing = 2
 
 
-def get_watched_users(options: InfoOptions = InfoOptions.following, user_="AlienVault"):
-    """Gets list of users that specified user follows/subscribes to. Defaults user_ to AlienVault
+class QueueItem:
+    def __init__(self, name, trust_lvl):
+        self.name = name
+        self.trust_lvl = trust_lvl
+
+
+def _watched_users(options: InfoOptions, user_):
+    """Gets list of users that specified user follows/subscribes to.
 
     :param options: Whether returned users should be following or subscribing
     :param user_:  User whose following/subscribing users we want to get
     :return: list of users that AlienVault follows/subscribes to
     """
     users = []
-    try:
-        api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/{user_}/{options.name}/?limit=20")
-    except (NotFound, BadRequest, InvalidAPIKey):
-        return None
+    api_call = otx.get(f"https://otx.alienvault.com/otxapi/users/{user_}/{options.name}/?limit=20")
     while True:
         results = api_call['results']
         for result in results:
@@ -33,68 +37,71 @@ def get_watched_users(options: InfoOptions = InfoOptions.following, user_="Alien
     return users
 
 
-def get_trusted_users(current_user, threshold, current=0, is_follower=False, subscribe_dict=None, follow_dict=None):
+def get_watched_users(options: InfoOptions, user_):
+    """Tries to get list of users that specified user follows/subscribes to. If a request limit on the OTX platform is
+    reached, waits for one hour and then tries again.
+
+    :param options: Whether returned users should be following or subscribing
+    :param user_: User whose following/subscribing users we want to get
+    :return:
+    """
+    try:
+        return _watched_users(options, user_)
+    except RetryError:
+        print("Sleep started: ", datetime.datetime.now())
+        sleep(3690)
+        print("Continuing...: ", datetime.datetime.now())
+        return _watched_users(options, user_)
+    except (NotFound, BadRequest, InvalidAPIKey) as e:
+        raise Exception("Unexpected error: " + e)
+
+
+def get_trusted_users(threshold, starting_username="AlienVault"):
     """Gets users that should be trusted to follow and subscribe based on threshold.
 
-    :param current_user: Current user
     :param threshold: Threshold
-    :param current: current level of trustability
-    :param is_follower: Whether the user is followed or not
-    :param subscribe_dict: Set of users that are safe to subscribe
-    :param follow_dict: Set of users that are safe to follow
+    :param starting_username: Username of the user from which we start the algorithm
     :return: Sets of users that are safe to follow and subscribe
     """
-    if follow_dict is None:
-        follow_dict = {}
-    if subscribe_dict is None:
-        subscribe_dict = {}
+    subscribe_set = set()
+    follow_set = set()
+    sub_queue = deque()
+    sub_queue.append(QueueItem(starting_username, 0))
+    fol_queue = deque()
 
-    if is_follower:
-        # In the following statement this will not harm but could be useless: follow_dict.get(current_user) > current
-        if current_user not in follow_dict or follow_dict.get(current_user) > current:
-            follow_dict.update({current_user: current})
-    else:
-        # In the following statement this will not harm but could be useless: subscribe_dict.get(current_user) > current
-        if current_user not in subscribe_dict or subscribe_dict.get(current_user) > current:
-            subscribe_dict.update({current_user: current})
+    while current_user := sub_queue.popleft():
+        subscribe_set.add(current_user.name)
+        subscribers_list = get_watched_users(InfoOptions.subscribing, current_user.name)
+        for subscriber_name in subscribers_list:
+            if subscriber_name not in subscribe_set:
+                sub_queue.append(QueueItem(subscriber_name, current_user.trust_lvl))
 
-    if current <= threshold:
-        try:
-            subscribers_list = get_watched_users(InfoOptions.subscribing, current_user)
-        except RetryError:
-            # Requests limit reached
-            print("Sleep started: ", datetime.datetime.now())
-            sleep(3690)
-            print("Continuing...: ", datetime.datetime.now())
-            subscribers_list = get_watched_users(InfoOptions.subscribing, current_user)
+        followers_list = get_watched_users(InfoOptions.following, current_user.name)
+        for follower_name in followers_list:
+            if follower_name not in subscribe_set:
+                fol_queue.append(QueueItem(follower_name, current_user.trust_lvl + 1))
 
-        for subscriber_item in subscribers_list:
-            if not is_follower and subscriber_item in follow_dict:
-                follow_dict.pop(subscriber_item)
+        if not sub_queue:
+            break
 
-            if (subscriber_item not in subscribe_dict and subscriber_item not in follow_dict) or \
-                    (is_follower and follow_dict.get(subscriber_item, 0) > current):
-                if not is_follower:
-                    subscribe_dict.update({subscriber_item: current})
-                else:
-                    follow_dict.update({subscriber_item: current})
+    if fol_queue:
+        while current_user := fol_queue.popleft():
+            if current_user.trust_lvl > threshold:
+                break
 
-                get_trusted_users(subscriber_item, threshold, current, is_follower, subscribe_dict, follow_dict)
+            if current_user.name not in subscribe_set and current_user.name not in follow_set:
+                follow_set.add(current_user.name)
+                subscribers_list = get_watched_users(InfoOptions.subscribing, current_user.name)
+                for subscriber_name in subscribers_list:
+                    if subscriber_name not in subscribe_set and subscriber_name not in follow_set:
+                        fol_queue.appendleft(QueueItem(subscriber_name, current_user.trust_lvl))
 
-        if current < threshold:
-            try:
-                followers_list = get_watched_users(InfoOptions.following, current_user)
-            except RetryError:
-                print("Sleep started: ", datetime.datetime.now())
-                sleep(3690)
-                print("Continuing...: ", datetime.datetime.now())
-                followers_list = get_watched_users(InfoOptions.following, current_user)
+                followers_list = get_watched_users(InfoOptions.following, current_user.name)
+                for follower_name in followers_list:
+                    if follower_name not in subscribe_set and follower_name not in follow_set:
+                        fol_queue.append(QueueItem(follower_name, current_user.trust_lvl + 1))
 
-            for follower_item in followers_list:
-                if (follower_item not in follow_dict and follower_item not in subscribe_dict) or \
-                        follow_dict.get(follower_item, 0) > current:
+            if not fol_queue:
+                break
 
-                    follow_dict.update({follower_item: current})
-                    get_trusted_users(follower_item, threshold, current + 1, True, subscribe_dict, follow_dict)
-
-    return [follow_dict.keys(), subscribe_dict.keys()]
+    return [follow_set, subscribe_set]
