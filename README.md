@@ -1,7 +1,8 @@
-# bachelor-thesis-implementation
+# Gathering Information from Community Threat Intelligence Platform
 
-Implementation of bachelor's thesis on the topic of Gathering Information from Community Threat Intelligence Platform. 
-This implementation creates a program, that obtains data from the community threat intelligence platform [Open Threat Exchange (OTX)](https://otx.alienvault.com/) 
+
+Implementation of my bachelor's thesis on the topic of Gathering Information from Community Threat Intelligence Platform. 
+This implementation creates a program that obtains data from the community threat intelligence platform [Open Threat Exchange (OTX)](https://otx.alienvault.com/) 
 and [MITRE ATT&CK](https://attack.mitre.org/) knowledge base, and  stores it in a graph database [Neo4j](https://neo4j.com/).
 
 Running this program prompts the user which data he wants to update (OTX or ATT&CK) and then updates the appropriate data.
