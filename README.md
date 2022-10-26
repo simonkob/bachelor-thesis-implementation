@@ -4,6 +4,12 @@ Implementation of bachelor's thesis on the topic of Gathering Information from C
 This implementation creates a program, that obtains data from the community threat intelligence platform [Open Threat Exchange (OTX)](https://otx.alienvault.com/) 
 and [MITRE ATT&CK](https://attack.mitre.org/) knowledge base, and  stores it in a graph database [Neo4j](https://neo4j.com/).
 
+Running this program prompts the user which data he wants to update (OTX or ATT&CK) and then updates the appropriate data.
+
+<p align="center">
+  <img src="https://i.imgur.com/kd1yNCa.png" alt="Update options"/>
+</p>
+
 ## Before running
 
 Replace api_key in [main.py](https://gitlab.fi.muni.cz/xbezek2/bachelor-thesis-implementation/-/blob/master/main.py) and [users_algo.py](https://gitlab.fi.muni.cz/xbezek2/bachelor-thesis-implementation/-/blob/master/users_algo.py) with your own OTX api key. You can get it [here](https://otx.alienvault.com/api) after logging in or signing up.
